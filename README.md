@@ -113,11 +113,11 @@ There are two pages, one for each half of the question.
 
 **Fraud Patterns** shows the totals (transactions, fraud cases, fraud rate, fraud amount), then fraud rate by hour, amount and category, and transactions against fraud cases by month.
 
-![Fraud Patterns](images/dashboard_page1.png)
+![Fraud Patterns](images/01_Fraud_Patterns.png)
 
 **Alert Triggers** lets you pick a rule and an amount threshold and see alerts per day, precision and recall. It also has a chart of recall against alert volume, a grid showing where the fraud sits by time and amount, and the tier table. Everything on this page uses the test period.
 
-![Alert Triggers](images/dashboard_page2.png)
+![Alert Triggers](images/02_Alert_Triggers.png)
 
 ## Limitations
 
