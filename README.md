@@ -1,68 +1,84 @@
 # Credit Card Fraud Detection Analysis
 
-A bank can't look at every card transaction by hand, so it sets rules that raise an alert when something looks off. Set the rules too loose and the review team drowns in false alarms. Set them too tight and fraud slips through. This project tries to find a sensible middle.
+This is a fraud analytics project built on a simulated credit card transaction dataset from Kaggle. I wanted to answer two questions a fraud team would care about. Which transaction patterns signal fraud? And which triggers should a real-time alert system use, so that it catches a good share of fraud without burying the review team in false alarms?
 
-The question I wanted to answer: **which transaction patterns signal fraud, and which triggers should a real-time alert system use?**
+I used Python (pandas and Matplotlib) to analyse the data and test alert rules, and Power BI to put the results into a two page dashboard.
 
-I analysed about 1.85 million card transactions in Python, tested a set of possible alert rules, and built a two-page Power BI dashboard to show the results.
+![Fraud patterns page](images/01_Fraud_Patterns.png)
 
-## The data
+## Business Question
 
-I used the simulated credit card fraud dataset on Kaggle by kartik2112: [Credit Card Transactions Fraud Detection Dataset](https://www.kaggle.com/datasets/kartik2112/fraud-detection).
+Which transaction patterns consistently signal fraudulent behaviour, and which triggers should be set in a real-time fraud alert system?
 
-- 1,852,394 transactions from 1 Jan 2019 to 31 Dec 2020
-- 999 cards, 693 merchants, 51 states (50 plus DC)
-- 9,651 fraud transactions, which is 0.52%, or roughly 1 in 190
-- Two files: a train file (up to 21 Jun 2020) and a test file (after that)
-- No missing values, no duplicates
+## Dataset
 
-I started out looking at the well-known European card dataset (284,807 transactions) but dropped it. It only covers two days, has no dates, and its columns are scrambled, so I couldn't look at monthly patterns or say anything in business terms. This one has timestamps, merchant categories and locations.
+The data is the Credit Card Transactions Fraud Detection Dataset on Kaggle, simulated with the Sparkov generator: https://www.kaggle.com/datasets/kartik2112/fraud-detection
 
-It is simulated, so everything below describes this dataset. I wouldn't expect the exact thresholds to hold on real bank data. The method should.
+It has 1,852,394 transactions from 1 Jan 2019 to 31 Dec 2020, across 999 cards, 693 merchants and 51 states (50 plus DC). Of these, 9,651 are fraud, which is 0.52%, or roughly 1 in 190. That is the average I compare everything against. There are no missing values and no duplicate rows.
 
-## What I did
+It comes as two files. The train file covers 1 Jan 2019 to 21 Jun 2020 and the test file covers the time after that, so the split is by date.
 
-I loaded both files, tagged each row as train or test, and cleaned up the columns. I dropped names and street addresses because I didn't need them, and I wouldn't want them in a public dashboard anyway. Then I added a few columns: hour, month, weekday, age at the time of the transaction, amount bands, and the distance between the cardholder's home and the merchant.
+I started out looking at the well known European card dataset (284,807 transactions) but dropped it. It only covers two days, has no dates, and its columns are scrambled, so I could not look at monthly patterns or explain any rule in business terms. This one has timestamps, merchant categories and locations.
 
-For the analysis I compared fraud **rates**, not counts. Counts mostly follow how many transactions happen, so they can look like a pattern when they aren't. I also used **lift**, which is a segment's fraud rate divided by the overall 0.52%.
+The data is simulated, so everything below describes this dataset. I would not expect the exact thresholds to hold on a real bank's data. The method should.
 
-For the rules, I used the train period to pick thresholds and the test period to check them. A rule that only works on the data it was tuned on isn't worth much.
+## Project Workflow
 
-Accuracy is useless when 99.5% of transactions are legitimate (a rule that flags nothing is 99.5% accurate), so I judged each rule on four things:
+The project runs from the raw files to the dashboard in these steps.
 
-- **Alerts per day**: how much work it creates for a reviewer
-- **Precision**: how many of the alerts are real fraud
-- **Recall**: how much of the fraud it catches
-- **Dollar recall**: how much of the fraud money it catches
+1. **Load the data.** I loaded both files, tagged every row as train or test, and checked for missing values, duplicates, the date range and the number of cards, merchants and states. There were no missing values and no duplicates.
+2. **Clean the data.** I dropped a leftover index column and the name and street columns. I did not need them, and I would not want them in a public dashboard. I also converted the date columns.
+3. **Add features.** Hour, month, weekday, age at the time of the transaction, amount bands, and the distance between the cardholder's home and the merchant.
+4. **Compare segments.** For every factor I worked out the fraud rate and the number of transactions, and hid groups that were too small to trust. I also used lift, which is a group's fraud rate divided by the overall 0.52%.
+5. **Test alert rules.** I turned the patterns into rules and measured alerts per day, precision, recall and dollar recall for each.
+6. **Choose the threshold.** I read the amount threshold from the train period and checked it on the test period.
+7. **Prepare the tables for Power BI.** I exported 13 small summary tables from the notebook so the dashboard stays light.
+8. **Build the dashboard.** Two pages in Power BI, with DAX measures and slicers for the rule and the amount threshold.
 
-## What I found
+## Key Findings
 
-**Time of day matters a lot.** The hours from 10 PM to 4 AM have 23.5% of transactions but 84.6% of fraud. Fraud runs at about 2.6% around 10 to 11 PM, about 1.3% from midnight to 4 AM, and about 0.1% during the day.
+Here is the lowest and the highest fraud rate for each factor. The average is 0.52%.
 
-**Month and weekday don't mean much.** Fraud cases per month stay between about 650 and 940, while the number of transactions swings from 98,000 to 281,000. So a month looks "safer" or "riskier" mostly because of how many normal transactions it has. December is the clearest example. I didn't claim any seasonal pattern.
+| Factor | Lowest group | Highest group |
+|---|---|---|
+| Hour of day | 4 AM to 9 PM: about 0.1% | 10 PM: 2.6% |
+| Amount | 50 to 100 dollars: 0.01% | 750 to 1,000 dollars: 49.2% |
+| Category (all transactions) | health_fitness: 0.15% | shopping_net: 1.59% |
+| Category (250 dollars or more) | travel: 0% | grocery_pos: 89% |
+| State (20 or more cards) | AR: 0.44% | VA: 0.65% |
+| Distance from home | no difference | no difference |
 
-**Amount matters even more.** Transactions of 200 dollars or more are 4.7% of all transactions and 75.8% of fraud. Below 250 dollars fraud is close to zero, then it jumps: roughly 8% for 250 to 300 and 12% for 300 to 400, and it peaks at 49% for 750 to 1,000. Above 2,000 dollars there is no fraud at all.
+The hour of day separates fraud from normal transactions clearly. The hours from 10 PM to 4 AM hold 23.5% of all transactions but 84.6% of all fraud. Fraud runs at about 2.6% around 10 to 11 PM, about 1.3% from midnight to 4 AM, and about 0.1% during the day.
 
-**Category only really shows up on large transactions.** Across everything, shopping_net, misc_net and grocery_pos are about 2.4 to 3.1 times the average rate, which looks modest. But among transactions of 250 dollars or more, grocery_pos is about 89% fraud, shopping_net 20% and misc_net 16%, while travel, food_dining, health_fitness, kids_pets and personal_care have none. I only noticed this after checking category within the large transactions, so the first chart had hidden it.
+Amount is the strongest signal. Transactions of 200 dollars or more are only 4.7% of all transactions but 75.8% of fraud. Below 250 dollars the fraud rate is close to zero, and then it jumps: about 8% for 250 to 300 dollars and 12% for 300 to 400 dollars. There is no fraud above 2,000 dollars at all, so a rule aimed at very large amounts would catch nothing.
 
-**Things that turned out not to help:**
+Category surprised me. Across all transactions, shopping_net, misc_net and grocery_pos are only about 2.4 to 3.1 times the average, which looks modest. But among transactions of 250 dollars or more, grocery_pos is about 89% fraud, shopping_net is 20% and misc_net is 16%, while travel, food_dining, health_fitness, kids_pets and personal_care have no fraud at all. The first chart had hidden this, and I only saw it after checking category inside the large transactions.
 
-- Distance from home. The median is about 78 km for both fraud and normal transactions, and the two histograms sit on top of each other.
-- State. Only 21 of the 51 states have 20 or more cards, and among those the fraud rate only ranges from 0.44% to 0.65%. With so few cardholders per state, I wouldn't call any state riskier.
-- A few bad cards. 976 of the 999 cards have at least one fraud transaction, and the top 10% of them account for just 15% of fraud. So fraud is spread out, which is why simple rules on amount and time make sense.
+Distance from home did not help. The median is about 78 km for both fraud and normal transactions, and the two histograms sit almost exactly on top of each other. Every transaction in the data is within about 150 km of home.
 
-**Night and amount together:**
+State did not help either. Only 21 of the 51 states have 20 or more cards, and among those the fraud rate ranges from 0.44% to 0.65%. With so few cardholders in each state, I would not call any state riskier. It is on the dashboard only as a note, not as a finding.
+
+Fraud is also not driven by a few bad cards. 976 of the 999 cards have at least one fraud transaction, and the top 10% of them account for just 15% of fraud. That is why simple rules on amount, time and category make sense here.
+
+Night and amount together is where most of the fraud sits:
 
 | | 50 dollars or less | 50 to 200 dollars | Over 200 dollars |
 |---|---|---|---|
 | Day | 3.4% of fraud | 0.5% | 11.5% |
 | Night | 18.1% | 2.3% | 64.3% |
 
-Night transactions over 200 dollars are only 1.4% of volume but hold 64% of all fraud. No single rule gets all three of the big groups, though.
+Night transactions over 200 dollars are only 1.4% of all transactions but hold 64.3% of all fraud. No single rule covers all the big groups, though.
 
-## Testing alert rules
+## Testing Alert Rules
 
-First I tried some obvious rules at a 200 dollar threshold (test period):
+I judged each rule on four things:
+
+* **Alerts per day:** how much work it creates for a reviewer
+* **Precision:** how many of the alerts are real fraud
+* **Recall:** how much of the fraud it catches
+* **Dollar recall:** how much of the fraud money it catches
+
+First I tried some simple rules at a 200 dollar threshold. These are results on the test period:
 
 | Rule | Alerts per day | Precision | Recall | Dollar recall |
 |---|---|---|---|---|
@@ -72,9 +88,9 @@ First I tried some obvious rules at a 200 dollar threshold (test period):
 | Night AND amount 200+ | 36.3 | 19.4% | 63.5% | 83.6% |
 | Night OR amount 200+ | 765.2 | 1.4% | 95.8% | 99.8% |
 
-Night on its own and night OR amount catch a lot of fraud, but they fire 670 to 765 times a day and roughly 98 out of 100 alerts are false. Nobody could review that. Night AND amount is much more workable.
+Night on its own and night OR amount catch a lot of fraud, but they fire 670 to 765 times a day and about 98 of every 100 alerts are false. Nobody could review that. Night AND amount is far more workable.
 
-Then I tried different amount thresholds to see where to draw the line (test period):
+Then I tried different amount thresholds to see where to draw the line:
 
 | Threshold | Amount rule: alerts per day | Recall | Night AND amount: alerts per day | Recall |
 |---|---|---|---|---|
@@ -84,65 +100,80 @@ Then I tried different amount thresholds to see where to draw the line (test per
 | 300 | 62.6 | 65.2% | 18.6 | 55.9% |
 | 500 | 31.3 | 48.3% | 10.2 | 41.1% |
 
-I went with **250 dollars**. Going from 200 to 250 cuts alerts by about 38% and loses only about one point of recall. Going from 250 to 300 loses about nine points for not many fewer alerts. That also lines up with where the fraud rate jumps in the amount chart.
+I went with 250 dollars. Moving from 200 to 250 cuts alerts by about 38% and costs only about one point of recall. Moving from 250 to 300 costs about nine points of recall for not many fewer alerts. It also matches where the fraud rate jumps in the amount chart.
 
-I also tried adding merchant category. Limiting the 250 dollar amount rule to the six categories that actually showed fraud at that size cut alerts from 79.7 to 52.4 a day and kept recall at 73.0% (down from 73.8%). Precision went from 10.2% to 15.4%. A narrower rule, grocery_pos with amount of 250 or more, fires about 3 times a day with 84% precision, but it only catches about 23% of fraud. I built the category list from the train period only.
+I also tried adding merchant category. Limiting the 250 dollar amount rule to the six categories that showed fraud at that size cut alerts from 79.7 to 52.4 a day and kept recall at 73.0%, down from 73.8%. Precision went from 10.2% to 15.4%. A narrower rule, grocery_pos with an amount of 250 or more, fires only about 3 times a day with 84% precision, but it catches only about 23% of fraud. I built the category list from the train period only.
 
-One thing to be upfront about: precision is lower on the test period than on train for every rule (for example 39% down to 30% for the night tier). Recall barely changed. I report the test numbers.
+Precision is lower on the test period than on the train period for every rule. For the night tier it fell from 39% to 30%. Recall barely moved, by less than 2 points. I report the test numbers throughout.
 
-## What I would recommend
+## Alert Strategy
 
-At a 250 dollar threshold, on the test period:
+How many alerts a team can review decides how far to go, so the dashboard lets you pick the rule and the threshold. These are the results at 250 dollars on the test period:
 
 | Tier | Alerts per day | Precision | Recall | Dollar recall |
 |---|---|---|---|---|
 | Tier 1: night AND amount 250+ | 23.0 | 30.1% | 62.6% | 83.2% |
 | Tier 2: daytime AND amount 250+ | 56.7 | 2.2% | 11.1% | 14.9% |
-| Both | 79.7 | 10.2% | 73.8% | 98.1% |
+| Both tiers | 79.7 | 10.2% | 73.8% | 98.1% |
 
-1. Make **night AND amount of 250 or more** the main trigger. About 23 alerts a day, roughly one in three is real fraud, and it catches 63% of fraud cases and 83% of the fraud money.
-2. Add the **daytime** tier only if the review team has the capacity. It adds about 57 alerts a day at 2% precision, but takes dollar recall to 98%. How much capacity a real team has is something this data can't tell me, so it's an assumption.
-3. **grocery_pos with amount 250 or more** could be a very high-confidence add-on.
-4. I wouldn't use night alone, night OR amount, distance, state, month or weekday.
+My recommendation is to make night AND amount of 250 or more the main trigger. It gives about 23 alerts a day and catches 63% of fraud cases and 83% of the fraud money. The daytime tier is worth adding only if the review team has the capacity, because it adds about 57 alerts a day at 2% precision, though it takes dollar recall to 98%. How much capacity a real team has is something this data cannot tell me.
 
-There's a gap I couldn't close. Small night transactions (50 dollars or less) make up about 18% of fraud, and no amount-based rule touches them.
+I want to be clear about what the rules can and cannot do. Even the best tier is right only about 3 times in 10, so about 7 in 10 alerts are false alarms. The rules tell a team where to look first. They are not proof of fraud.
 
-## Dashboard
+There is also a gap I could not close. Small night transactions of 50 dollars or less make up about 18% of fraud, and no amount based rule touches them.
 
-There are two pages, one for each half of the question.
+## Dashboard Overview
 
-**Fraud Patterns** shows the totals (transactions, fraud cases, fraud rate, fraud amount), then fraud rate by hour, amount and category, and transactions against fraud cases by month.
+The Power BI report has two pages, one for each half of the question.
 
-![Fraud Patterns](images/01_Fraud_Patterns.png)
+1. **Fraud Patterns.** Total transactions, fraud cases, fraud rate and fraud amount, then fraud rate by hour of day, amount and category (large transactions only), and transactions against fraud cases by month.
+2. **Alert Triggers.** Slicers for the rule and the amount threshold, with cards for alerts per day, precision and recall. There is also a chart of recall against alert volume, a grid showing where fraud sits by time and amount, and the tier table. Everything on this page uses the test period.
 
-**Alert Triggers** lets you pick a rule and an amount threshold and see alerts per day, precision and recall. It also has a chart of recall against alert volume, a grid showing where the fraud sits by time and amount, and the tier table. Everything on this page uses the test period.
+![Alert triggers page](images/02_Alert_Triggers.png)
 
-![Alert Triggers](images/02_Alert_Triggers.png)
+## Key Decision: Rates, Not Counts
+
+My first look at fraud by month seemed to show a pattern. February had a fraud rate of 0.87% and December only 0.30%, almost three times lower. But the number of fraud cases was nearly the same, 853 in February and 850 in December. What changed was the number of normal transactions, about 98,000 in February and about 281,000 in December.
+
+Think of two shops that each had 10 fraudulent sales. One made 100 sales in total and the other made 300. The first looks like 10% fraud and the second like 3.3%, but the fraud did not change. Only the number of honest sales around it did.
+
+So I did not claim any seasonal pattern, and the same goes for weekdays. Counts only mean something with the volume next to them, which is why the charts in the dashboard show rates.
+
+The second decision was how to judge the rules. With 0.52% fraud, a rule that flags nothing at all is 99.5% accurate, so accuracy tells you nothing. I judged every rule on alerts per day, precision, recall and dollar recall, and I checked each on a later period that it had not been tuned on.
 
 ## Limitations
 
-- The data is simulated. The sharp patterns, like the hour cutoffs at 10 PM and 4 AM, are probably built into the generator, so I wouldn't read them as how real fraud behaves.
-- With only 999 cards, state comparisons are weak. I left out 30 states with fewer than 20 cards.
-- Distance never goes above about 150 km in this data, so I couldn't test whether far-from-home purchases are suspicious.
-- I assumed no cost for a missed fraud or for reviewing an alert, and no review capacity. Both would change which threshold is best.
-- I tested simple rules, not a machine learning model.
-- I didn't check how much the grocery_pos rule overlaps with the night tier.
-- Some values are odd, like cardholders aged 13.
+* The data is simulated. The sharp patterns, like the cutoffs at 10 PM and 4 AM, are probably built into the generator, so I would not read them as how real fraud behaves.
+* With only 999 cards, state comparisons are weak. I left out 30 states with fewer than 20 cards.
+* Distance never goes above about 150 km in this data, so I could not test whether far from home purchases are suspicious.
+* No cost is assumed for a missed fraud or for reviewing an alert, and no review capacity is assumed. Both would change which threshold is best.
+* I tested simple rules, not a machine learning model.
+* I did not check how much the grocery_pos rule overlaps with the night tier.
+* Some values are odd, like cardholders aged 13.
 
-## Files and how to run
+## Repository Structure
 
 ```
-credit-card-fraud-analysis/
-  README.md
-  fraud_analysis.ipynb      the analysis and rule testing
-  fraud_dashboard.pbix      Power BI dashboard
-  powerbi_exports/          summary tables used by the dashboard
-  images/                   dashboard screenshots
+README.md
+fraud_analysis.ipynb
+fraud_dashboard.pbix
+powerbi_exports/
+images/
 ```
 
-1. Download `fraudTrain.csv` and `fraudTest.csv` from the Kaggle link above and put them in the same folder as the notebook. They're too big to include in the repository.
-2. Install the packages: `pip install pandas numpy matplotlib jupyter`
-3. Run all cells in `fraud_analysis.ipynb`. The last cell writes the summary tables to `powerbi_exports/`.
-4. Open `fraud_dashboard.pbix` in Power BI Desktop. If it asks where the data is, point it to `powerbi_exports/`.
+The Kaggle files are too large to include, so download them from the link above.
 
-Tools: Python (pandas, NumPy, Matplotlib), Jupyter, Power BI
+## How to Reproduce
+
+1. Download fraudTrain.csv and fraudTest.csv from Kaggle and put them in the same folder as the notebook.
+2. Install the packages with `pip install pandas numpy matplotlib jupyter`.
+3. Run all the cells in fraud_analysis.ipynb. The last cell writes the summary tables to the powerbi_exports folder.
+4. Open fraud_dashboard.pbix in Power BI Desktop. If it asks where the data is, point it to the powerbi_exports folder.
+
+## Tools Used
+
+Python (pandas, NumPy and Matplotlib), Jupyter Notebook and Power BI Desktop (DAX measures and slicers).
+
+## Author
+
+Built by winklethakur. [GitHub](https://github.com/winklethakur) and [LinkedIn](https://www.linkedin.com/in/winkle-data-scientist)
