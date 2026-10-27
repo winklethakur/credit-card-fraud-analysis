@@ -4,8 +4,6 @@ This is a fraud analytics project built on a simulated credit card transaction d
 
 I used Python (pandas and Matplotlib) to analyse the data and test alert rules, and Power BI to put the results into a two page dashboard.
 
-![Fraud patterns page](images/01_Fraud_Patterns.png)
-
 ## Business Question
 
 Which transaction patterns consistently signal fraudulent behaviour, and which triggers should be set in a real-time fraud alert system?
@@ -126,8 +124,11 @@ There is also a gap I could not close. Small night transactions of 50 dollars or
 
 The Power BI report has two pages, one for each half of the question.
 
-1. **Fraud Patterns.** Total transactions, fraud cases, fraud rate and fraud amount, then fraud rate by hour of day, amount and category (large transactions only), and transactions against fraud cases by month.
-2. **Alert Triggers.** Slicers for the rule and the amount threshold, with cards for alerts per day, precision and recall. There is also a chart of recall against alert volume, a grid showing where fraud sits by time and amount, and the tier table. Everything on this page uses the test period.
+**Page 1: Fraud Patterns.** Total transactions, fraud cases, fraud rate and fraud amount, then fraud rate by hour of day, amount and category (large transactions only), and transactions against fraud cases by month.
+
+![Fraud patterns page](images/01_Fraud_Patterns.png)
+
+**Page 2: Alert Triggers.** Slicers for the rule and the amount threshold, with cards for alerts per day, precision and recall. There is also a chart of recall against alert volume, a grid showing where fraud sits by time and amount, and the tier table. Everything on this page uses the test period.
 
 ![Alert triggers page](images/02_Alert_Triggers.png)
 
